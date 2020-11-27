@@ -7,3 +7,27 @@ GET     /                           controllers.HomeController.index
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+
+POST      /api/authenticate/          controllers.AuthorizationController.authenticate(request: Request)
+POST      /api/validatejwt/           controllers.AuthorizationController.validateJwtResult(request: Request)
+
+POST      /api/users/                 controllers.HomeController.saveUser(request: Request)
+GET       /api/users/:id              controllers.HomeController.findUserById(request: Request, id: String)
+PUT       /api/users/:id              controllers.HomeController.updateUser(request: Request, id: String)
+DELETE    /api/users/:id              controllers.HomeController.deleteUserById(request: Request, id: String)
+GET       /api/users/all/              controllers.HomeController.findAllUsers(request: Request)
+
+GET       /api/dashboard/:id           controllers.DashboardController.findDashboardById(request: Request, id: String)
+POST      /api/dashboard/              controllers.DashboardController.saveDashboard(request: Request)
+PUT       /api/dashboard/:id           controllers.DashboardController.updateDashboard(request: Request, id: String)
+DELETE    /api/dashboard/:id           controllers.DashboardController.deleteDashboard(request: Request, id: String)
+GET       /api/dashboard/hierarchy/:id      controllers.DashboardController.findHierarchicDashboardById(request: Request, id: String)
+
+GET       /api/dashboard/:id/content/               controllers.ContentController.findAllContentByDashboardId(request: Request, id: String)
+POST      /api/dashboard/:id/content/                       controllers.ContentController.saveContent(request: Request, id: String)
+PUT       /api/dashboard/content/:contentId         controllers.ContentController.updateContent(request: Request, contentId: String)
+DELETE    /api/dashboard/content/:contentId         controllers.ContentController.deleteContent(request: Request, contentId: String)
+
+GET       /api/chat/:roomId	           controllers.ChatController.chat(roomId: String, token: String)
+
+
