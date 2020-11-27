@@ -21,6 +21,7 @@ libraryDependencies ++= Seq(
   "org.mongodb" % "mongodb-driver-sync" % "4.1.0",
   "org.projectlombok" % "lombok" % "1.18.12",
   "de.flapdoodle.embed" % "de.flapdoodle.embed.mongo" % "2.0.0",
+  "com.auth0" % "java-jwt" % "3.11.0",
   //"com.typesafe.play" %% "play-mailer" % "6.0.1",
   //"com.typesafe.play" %% "play-mailer-guice" % "6.0.1",
 
