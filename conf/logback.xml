@@ -14,7 +14,7 @@
   </appender>
 
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-    <withJansi>true</withJansi>
+    <withJansi>false</withJansi>
     <encoder>
       <charset>UTF-8</charset>
       <pattern>
@@ -22,6 +22,18 @@
       </pattern>
     </encoder>
   </appender>
+
+  <logger name="application" level="INFO" />
+  <logger name="play" level="DEBUG" />
+
+  <logger name="actions" level="DEBUG" />
+  <logger name="actors" level="DEBUG" />
+  <logger name="controllers" level="DEBUG" />
+  <logger name="models" level="DEBUG" />
+  <logger name="modules" level="DEBUG" />
+  <logger name="mongo" level="DEBUG" />
+  <logger name="services" level="DEBUG" />
+  <logger name="utils" level="DEBUG" />
 
   <appender name="ASYNCFILE" class="ch.qos.logback.classic.AsyncAppender">
     <appender-ref ref="FILE" />
