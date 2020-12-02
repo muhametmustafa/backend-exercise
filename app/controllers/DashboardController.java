@@ -43,8 +43,10 @@ public class DashboardController extends Controller {
     @BodyParser.Of(BodyParser.Json.class)
     public CompletableFuture<Result> saveDashboard (Http.Request request) {
         User user = request.attrs().get(AuthorizationAction.Attrs.USER);
-        return serializationService.parseBodyOfType(request, Dashboard.class).
-                thenCompose(dashboard -> dashboardService.saveDashboard(dashboard, user))
+        return serializationService.parseBodyOfType(request, Dashboard.class)
+                .thenCompose(dashboard -> dashboardService.saveDashboard(dashboard, user))
+                .thenCompose(dashboard -> serializationService.toJsonNode(dashboard))
+                .thenApply(Results::ok)
                 .exceptionally(DatabaseUtils::throwableToResult);
     }
     @With(AuthorizationAction.class)
@@ -56,12 +58,12 @@ public class DashboardController extends Controller {
                 .exceptionally(DatabaseUtils::throwableToResult);
     }
 
-    /*    public CompletableFuture<Result> findHierarchalDashboards (Http.Request request) {
+        public CompletableFuture<Result> findHierarchicDashboards (Http.Request request) {
         return dashboardService.findHierarchicDashboards()
                 .thenCompose(dashboard -> serializationService.toJsonNode(dashboard))
                 .thenApply(Results::ok)
                  .exceptionally(DatabaseUtils::throwableToResult);
-    }*/
+        }
 
     public CompletableFuture<Result> findAllDashboards(Http.Request request) {
         return dashboardService.findAllDashboards()

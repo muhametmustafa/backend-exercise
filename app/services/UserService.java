@@ -52,9 +52,9 @@ public class UserService {
     }
 
     public CompletableFuture<User> saveUser(User user) {
-        Logger.of(this.getClass()).error(user.toString());
+        //Logger.of(this.getClass()).debug(user.toString());
         User foundUser = findUserByUsername(user.getUsername()).join();
-        //Logger.of(this.getClass()).error(foundUser.toString());
+        //Logger.of(this.getClass()).debug(foundUser.toString());
         if(foundUser != null) {
             throw new RequestException(Http.Status.CONFLICT, "This username is not free");
         }

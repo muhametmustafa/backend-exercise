@@ -31,7 +31,7 @@ public class Content extends BaseModel implements Accessible{
     List<String> readACL = new ArrayList<>();
     List<String> writeACL = new ArrayList<>();
 
-    enum Type {
+    public enum Type {
         EMAIL, TEXT, IMAGE, LINE, NONE
     }
 }

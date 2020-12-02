@@ -32,13 +32,6 @@ public class HomeController extends Controller {
      * this method will be called when the application receives a
      * <code>GET</code> request with a path of <code>/</code>.
      */
-    public Result test(Http.Request request) {
-        Document document = Json.fromJson(request.body().asJson(), Document.class);
-        mongoDB.getMongoDatabase().getCollection("testCollection").insertOne(document);
-        return ok(Json.toJson(document));
-
-    }
-
     public Result index() {
         return ok(views.html.index.render());
     }

@@ -22,12 +22,15 @@ POST      /api/dashboard/              controllers.DashboardController.saveDashb
 PUT       /api/dashboard/:id           controllers.DashboardController.updateDashboard(request: Request, id: String)
 DELETE    /api/dashboard/:id           controllers.DashboardController.deleteDashboard(request: Request, id: String)
 GET       /api/dashboard/hierarchy/:id      controllers.DashboardController.findHierarchicDashboardById(request: Request, id: String)
+GET       /api/dashboard/hierarchy/all/      controllers.DashboardController.findHierarchicDashboards(request: Request)
+
 
 GET       /api/dashboard/:id/content/               controllers.ContentController.findAllContentByDashboardId(request: Request, id: String)
 POST      /api/dashboard/:id/content/                       controllers.ContentController.saveContent(request: Request, id: String)
 PUT       /api/dashboard/content/:contentId         controllers.ContentController.updateContent(request: Request, contentId: String)
 DELETE    /api/dashboard/content/:contentId         controllers.ContentController.deleteContent(request: Request, contentId: String)
 
-GET       /api/chat/:roomId	           controllers.ChatController.chat(roomId: String, token: String)
+GET       /api/chat/:roomId/	           controllers.ChatController.chat(roomId: String, token: String)
+
 
 

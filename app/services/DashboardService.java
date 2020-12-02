@@ -1,15 +1,11 @@
 package services;
 
-import com.google.common.base.Strings;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import exceptions.RequestException;
 import models.Dashboard;
 import models.User;
-import models.validators.HibernateValidator;
 import play.libs.Json;
 import play.libs.concurrent.HttpExecutionContext;
-import play.mvc.Http;
 import play.mvc.Result;
 
 import java.util.Date;
@@ -69,14 +65,10 @@ public class DashboardService {
         }, ec.current());
     }
 
-    public CompletableFuture<Result> saveDashboard(Dashboard dashboard, User user) {
+    public CompletableFuture<Dashboard> saveDashboard(Dashboard dashboard, User user) {
         return CompletableFuture.supplyAsync(() -> {
             dashboard.setTimestamp(new Date().getTime());
-            if(isWritable(user, dashboard)) {
-                Dashboard savedDashboard = dashboardService.save(DASHBOARD_COLLECTION, Dashboard.class, dashboard);
-                return ok(Json.toJson(savedDashboard));
-            }
-            return forbidden(writeErrorNode());
+            return dashboardService.save(DASHBOARD_COLLECTION, Dashboard.class, dashboard);
         }, ec.current());
     }
 
@@ -110,7 +102,7 @@ public class DashboardService {
      * Gets the hierarchy for all dashboards
      * @return nested list of top level parent dashboards.
      */
-    /*public CompletableFuture<List<Dashboard>> findHierarchicDashboards() {
+    public CompletableFuture<List<Dashboard>> findHierarchicDashboards() {
         return CompletableFuture.supplyAsync(() -> {
             List<Dashboard> allDashboards = findAllDashboards().join();
             List<Dashboard> parentDashboards = allDashboards
@@ -122,6 +114,6 @@ public class DashboardService {
             }
             return parentDashboards;
         }, ec.current());
-    }*/
+    }
 
 }

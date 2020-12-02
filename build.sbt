@@ -27,6 +27,7 @@ libraryDependencies ++= Seq(
 
   "org.hibernate" % "hibernate-validator" % "6.1.5.Final",
   "org.glassfish" % "javax.el" % "3.0.0",
+
   // akka related stuff
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
@@ -38,16 +39,16 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
   "com.typesafe.akka" %% "akka-cluster-tools" % akkaVersion,
   "com.typesafe.akka" %% "akka-serialization-jackson" % akkaVersion,
+  "com.typesafe.akka" %% "akka-cluster-typed" % akkaVersion,
   // akka cluster related stuff
   "com.lightbend.akka.discovery" %% "akka-discovery-kubernetes-api" % akkaManagementVersion,
   "com.lightbend.akka.management" %% "akka-management" % akkaManagementVersion,
   "com.lightbend.akka.management" %% "akka-management-cluster-http" % akkaManagementVersion,
   "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % akkaManagementVersion,
-  // akka htttp related stuff
+  //akka http related stuff
   "com.typesafe.akka" %% "akka-http-core" % akkaHTTPVersion,
   "com.typesafe.akka" %% "akka-http2-support" % akkaHTTPVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHTTPVersion,
   "com.typesafe.akka" %% "akka-http" % akkaHTTPVersion,
-
   "com.github.karelcemus" %% "play-redis" % "2.5.0"
 )

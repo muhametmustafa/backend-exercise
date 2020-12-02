@@ -27,27 +27,34 @@ public final class InMemoryMongoDB extends MongoDriver {
 	@Inject
 	public InMemoryMongoDB(CoordinatedShutdown coordinatedShutdown, Config config) {
 		super(coordinatedShutdown, config);
+
+		this.init();
 	}
 
-	@Override
-	public MongoDatabase connect() {
-		IRuntimeConfig builder = new RuntimeConfigBuilder()
-				.defaults(Command.MongoD)
-				.processOutput(ProcessOutput.getDefaultInstanceSilent())
-				.build();
-		MongodStarter starter = MongodStarter.getInstance(builder);
+	private void init() {
+		if (mongoEx != null) {
+			return;
+		}
 		try {
+			IRuntimeConfig builder = new RuntimeConfigBuilder()
+					.defaults(Command.MongoD)
+					.processOutput(ProcessOutput.getDefaultInstanceSilent())
+					.build();
+			MongodStarter starter = MongodStarter.getInstance(builder);
 			mongoEx = starter.prepare(new MongodConfigBuilder()
 					.version(Version.Main.PRODUCTION)
 					.net(new Net("localhost", 12345, Network.localhostIsIPv6()))
 					.build());
 			mongoEx.start();
-			client = MongoClients.create("mongodb://localhost:27017");
-			return client.getDatabase("test");
 		} catch (IOException e) {
 			e.printStackTrace();
-			return null;
 		}
+	}
+
+	@Override
+	public MongoDatabase connect() {
+		client = MongoClients.create("mongodb://localhost:27017");
+		return client.getDatabase("test");
 	}
 
 

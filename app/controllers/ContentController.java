@@ -18,6 +18,7 @@ public class ContentController extends Controller {
 
     @Inject
     ContentService contentService;
+
     @With(AuthorizationAction.class)
     public CompletableFuture<Result> findAllContentByDashboardId(Http.Request request, String id) {
         User user = request.attrs().get(AuthorizationAction.Attrs.USER);
@@ -30,6 +31,8 @@ public class ContentController extends Controller {
         User user = request.attrs().get(AuthorizationAction.Attrs.USER);
         return serializationService.parseBodyOfType(request, Content.class)
                 .thenCompose(object -> contentService.saveContent(dashboardId, object, user))
+                .thenCompose(content -> serializationService.toJsonNode(content))
+                .thenApply(Results::ok)
                 .exceptionally(DatabaseUtils::throwableToResult);
     }
     @With(AuthorizationAction.class)

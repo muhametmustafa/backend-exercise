@@ -42,7 +42,7 @@ public class ContentService {
     public CompletableFuture<Result> findContentByDashboardId(String dashboardId, User user) {
         return CompletableFuture.supplyAsync(() -> {
             MongoCollection<Content> collection = getContentCollection();
-            List<Content> contentList =  collection.find()
+            List<Content> contentList = collection.find()
                     .filter(Filters.eq("dashboardId", dashboardId))
                     .into(new ArrayList<>());
             Dashboard dashboard = dashboardService.findById(DASHBOARD_COLLECTION, Dashboard.class, dashboardId);
@@ -57,16 +57,12 @@ public class ContentService {
         }, ec.current());
     }
 
-    public CompletableFuture<Result> saveContent(String dashboardId, Content content, User user) {
+    public CompletableFuture<Content> saveContent(String dashboardId, Content content, User user) {
         return CompletableFuture.supplyAsync(()-> {
             dashboardService.findById(DASHBOARD_COLLECTION, Dashboard.class, dashboardId);
             //Above object is created only to check if dashboard exists or it's id is valid!
             content.setDashboardId(dashboardId);
-            if(isWritable(user, content)){
-                Content savedContent = contentService.save(CONTENT_COLLECTION, Content.class, content);
-                return ok(Json.toJson(savedContent));
-            }
-            return forbidden(writeErrorNode());
+            return contentService.save(CONTENT_COLLECTION, Content.class, content);
         }, ec.current());
     }
 

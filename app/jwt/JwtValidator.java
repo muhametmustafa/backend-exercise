@@ -54,7 +54,6 @@ public class JwtValidator {
         }
         String token = authHeader.map(ah -> ah.replace(BEARER, "")).orElse("");
         return verify(token);
-
     }
 
 }

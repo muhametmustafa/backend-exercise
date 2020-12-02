@@ -26,6 +26,7 @@ import static utils.AccessUtils.isWritable;
 
 @Singleton
 public class ChatController extends Controller {
+    private static final String USERS_COLLECTION = "users";
     @Inject
     private ActorSystem actorSystem;
 
@@ -61,7 +62,7 @@ public class ChatController extends Controller {
                 return CompletableFuture.completedFuture(F.Either.Left(result));
             }
 
-            User user = userService.findById("users", User.class, objectNode.get("userId").asText());
+            User user = userService.findById(USERS_COLLECTION, User.class, objectNode.get("userId").asText());
 
             if(!isWritable(user, optionalChatRoom.get())){
                 result = forbidden(Json.toJson("You don't have acces to the chat!"));
