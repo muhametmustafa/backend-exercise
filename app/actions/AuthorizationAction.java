@@ -28,8 +28,9 @@ public class AuthorizationAction extends Action.Simple{
         if(!objectNode.has("userId")){
             return CompletableFuture.completedFuture(unauthorized(objectNode));
         }
-        User user = userService.findUserById(objectNode.get("userId").asText()).join();
-        return delegate.call(req.addAttr(Attrs.USER, user));
+        return userService.findUserById(objectNode.get("userId").asText())
+                .thenCompose(user -> delegate.call(req.addAttr(Attrs.USER, user)));
+
     }
 
 

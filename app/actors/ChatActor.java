@@ -7,7 +7,10 @@ import akka.cluster.pubsub.DistributedPubSub;
 import akka.cluster.pubsub.DistributedPubSubMediator;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
+import models.ChatRoom;
 import models.User;
+
+import static utils.AccessUtils.isWritable;
 
 /**
  * Chat Actor - Representing a user in a room!
@@ -33,7 +36,7 @@ public class ChatActor extends AbstractActor {
 	/**
 	 * Room ID to pub/sub
 	 */
-	private String roomId;
+	private ChatRoom chatRoom;
 	/**
 	 * Web socket represented from the front end
 	 */
@@ -43,15 +46,15 @@ public class ChatActor extends AbstractActor {
 	 */
 	private User user;
 
-	public static Props props(ActorRef out, String roomId, User user) {
+	public static Props props(ActorRef out, ChatRoom roomId, User user) {
 		return Props.create(ChatActor.class, () -> new ChatActor(out, roomId, user));
 	}
 
-	private ChatActor(ActorRef out, String roomId, User user) {
-		this.roomId = roomId;
+	private ChatActor(ActorRef out, ChatRoom roomId, User user) {
+		this.chatRoom = roomId;
 		this.out = out;
 		this.user = user;
-		mediator.tell(new DistributedPubSubMediator.Subscribe(roomId, getSelf()), getSelf());
+		mediator.tell(new DistributedPubSubMediator.Subscribe(chatRoom.getRoomId(), getSelf()), getSelf());
 	}
 
 	@Override
@@ -73,7 +76,14 @@ public class ChatActor extends AbstractActor {
 			out.tell(PONG, getSelf());
 			return;
 		}
-		broadcast(message);
+		if(isWritable(user, chatRoom)){
+			broadcast(String.format("%s is saying: %s", user.getUsername(), message));
+		}
+		else {
+			String notWritable = "You cannot send messages in this chat room!";
+			out.tell(notWritable, getSelf());
+		}
+
 	}
 
 	/**
@@ -118,14 +128,14 @@ public class ChatActor extends AbstractActor {
 	 * Sends a simple JOINED_ROOM message
 	 */
 	private void joinTheRoom () {
-		this.broadcast(JOINED_ROOM);
+		this.broadcast(user.getUsername() + JOINED_ROOM);
 	}
 
 	/**
 	 * Sends a simple LEFT_ROOM message
 	 */
 	private void leaveTheRoom () {
-		this.broadcast(LEFT_ROOM);
+		this.broadcast(user.getUsername() + LEFT_ROOM);
 	}
 
 	/**
@@ -133,16 +143,8 @@ public class ChatActor extends AbstractActor {
 	 * @param message
 	 */
 	private void broadcast (String message) {
-		StringBuilder output = new StringBuilder();
-		String username = user.getUsername();
-		if(message.equals(JOINED_ROOM) || message.equals(LEFT_ROOM)){
-			output.append(username).append(message);
-		}
-		else {
-			output.append(String.format("%s is saying: %s", username, message));
-		}
 		mediator.tell(
-			new DistributedPubSubMediator.Publish(roomId, new ChatActorProtocol.ChatMessage(output.toString())),
+			new DistributedPubSubMediator.Publish(chatRoom.getRoomId(), new ChatActorProtocol.ChatMessage(message)),
 			getSelf()
 		);
 	}

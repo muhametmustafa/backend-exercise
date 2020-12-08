@@ -2,20 +2,21 @@ package services;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import exceptions.RequestException;
 import models.Dashboard;
 import models.User;
-import play.libs.Json;
 import play.libs.concurrent.HttpExecutionContext;
-import play.mvc.Result;
+import play.mvc.Http;
 
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
-import static play.mvc.Results.forbidden;
-import static play.mvc.Results.ok;
-import static utils.AccessUtils.*;
+import static play.mvc.Http.Status.FORBIDDEN;
+import static utils.AccessUtils.isReadable;
+import static utils.AccessUtils.isWritable;
 
 @Singleton
 public class DashboardService {
@@ -23,77 +24,84 @@ public class DashboardService {
     HttpExecutionContext ec;
     private final String DASHBOARD_COLLECTION = "dashboards";
     @Inject
-    private BaseService<Dashboard> dashboardService;
+    private MongoRepository<Dashboard> dashboardRepository;
 
 
-    public CompletableFuture<List<Dashboard>> findAllDashboards () {
-        return CompletableFuture.supplyAsync(() -> dashboardService.findAll(DASHBOARD_COLLECTION, Dashboard.class), ec.current());
-    }
-
-    public CompletableFuture<Result> findHierarchicDashboardById(String id, User user) {
+    public CompletableFuture<List<Dashboard>> findAllDashboards (User user) {
         return CompletableFuture.supplyAsync(() -> {
-            Dashboard dashboard = dashboardService.findById(DASHBOARD_COLLECTION, Dashboard.class, id);
-            if(isWritable(user, dashboard)) {
-                List<Dashboard> allDashboards = findAllDashboards().join();
-                buildHierarchyTree(dashboard, allDashboards);
-                return ok(Json.toJson(dashboard));
-            }
-            return forbidden(readErrorNode());
+            List<Dashboard> allDashboards = dashboardRepository.findAll(DASHBOARD_COLLECTION, Dashboard.class);
+            return allDashboards
+                    .stream()
+                    .filter(dashboard -> isReadable(user, dashboard))
+                    .collect(Collectors.toList());
         }, ec.current());
     }
 
-
-    public CompletableFuture<Result> findDashboardById(String id, User user) {
-        return CompletableFuture.supplyAsync(() -> {
-            Dashboard dashboard =  dashboardService.findById(DASHBOARD_COLLECTION, Dashboard.class, id);
-            if(isReadable(user, dashboard)){
-                return ok(Json.toJson(dashboard));
+    public CompletableFuture<Dashboard> findHierarchicDashboardById(String id, User user) {
+            Dashboard dashboard = dashboardRepository.findById(DASHBOARD_COLLECTION, Dashboard.class, id);
+            if(!isReadable(user, dashboard)) {
+                throw new CompletionException(new RequestException(FORBIDDEN,
+                        "This user doesn't have read access on this dashboard!"));
             }
-            return forbidden(readErrorNode());
+            return findAllDashboards(user)
+                    .thenApply(allDashboards -> {
+                        buildHierarchyTree(dashboard, allDashboards, user);
+                        return dashboard;
+                    });
+    }
+
+    public CompletableFuture<Dashboard> findDashboardById(String id, User user) {
+        return CompletableFuture.supplyAsync(() -> {
+            Dashboard dashboard =  dashboardRepository.findById(DASHBOARD_COLLECTION, Dashboard.class, id);
+            if(!isReadable(user, dashboard)){
+                throw new CompletionException(new RequestException(FORBIDDEN,
+                        "This user doesn't have read access on this dashboard!"));
+            }
+            return dashboard;
         }, ec.current());
     }
 
-
-    public CompletableFuture<Result> deleteDashboardById(String id, User user) {
+    public CompletableFuture<Dashboard> deleteDashboardById(String id, User user) {
         return CompletableFuture.supplyAsync(() -> {
-            Dashboard dashboard = dashboardService.findById(DASHBOARD_COLLECTION, Dashboard.class, id);
-            if(isWritable(user, dashboard)) {
-                Dashboard deletedDashboard = dashboardService.deleteById(DASHBOARD_COLLECTION, Dashboard.class, id);
-                return ok(Json.toJson(deletedDashboard));
+            Dashboard dashboard = dashboardRepository.findById(DASHBOARD_COLLECTION, Dashboard.class, id);
+            if(!isWritable(user, dashboard)) {
+                throw new CompletionException(new RequestException(Http.Status.FORBIDDEN,
+                        "This user doesn't have write access on this dashboard!"));
             }
-            return forbidden(writeErrorNode());
+            return dashboardRepository.deleteById(DASHBOARD_COLLECTION, Dashboard.class, id);
         }, ec.current());
     }
 
     public CompletableFuture<Dashboard> saveDashboard(Dashboard dashboard, User user) {
         return CompletableFuture.supplyAsync(() -> {
             dashboard.setTimestamp(new Date().getTime());
-            return dashboardService.save(DASHBOARD_COLLECTION, Dashboard.class, dashboard);
+            return dashboardRepository.save(DASHBOARD_COLLECTION, Dashboard.class, dashboard);
         }, ec.current());
     }
 
 
-    public CompletableFuture<Result> updateDashboard(String id, Dashboard dashboardToBeUpdated, User user) {
+    public CompletableFuture<Dashboard> updateDashboard(String id, Dashboard dashboardToBeUpdated, User user) {
         return CompletableFuture.supplyAsync(() -> {
-            Dashboard dashboard = dashboardService.findById(DASHBOARD_COLLECTION, Dashboard.class, id);
-            if(isWritable(user, dashboard)) {
-                Dashboard updatedDashBoard = dashboardService.update(DASHBOARD_COLLECTION, Dashboard.class, id, dashboardToBeUpdated);
-                return ok(Json.toJson(updatedDashBoard));
+            Dashboard dashboard = dashboardRepository.findById(DASHBOARD_COLLECTION, Dashboard.class, id);
+            if(!isWritable(user, dashboard)) {
+                throw new CompletionException(new RequestException(Http.Status.FORBIDDEN,
+                        "This user doesn't have write access on this dashboard!"));
             }
-            return forbidden(writeErrorNode());
+            return dashboardRepository.update(DASHBOARD_COLLECTION, Dashboard.class, id, dashboardToBeUpdated);
         }, ec.current());
 
     }
 
-    private void buildHierarchyTree(Dashboard dashboard, List<Dashboard> allDashboards) {
+    private void buildHierarchyTree(Dashboard dashboard, List<Dashboard> allDashboards, User user) {
         List<Dashboard> children = allDashboards
                 .stream()
                 .filter(next -> dashboard.getId().toString().equals(next.getParentId()))
+                .filter(next -> isReadable(user, next))
                 .collect(Collectors.toList());
         dashboard.setChildren(children);
         if(!children.isEmpty()) {
             for (Dashboard child : children) {
-                buildHierarchyTree(child, allDashboards);
+                buildHierarchyTree(child, allDashboards, user);
             }
         }
     }
@@ -102,18 +110,17 @@ public class DashboardService {
      * Gets the hierarchy for all dashboards
      * @return nested list of top level parent dashboards.
      */
-    public CompletableFuture<List<Dashboard>> findHierarchicDashboards() {
-        return CompletableFuture.supplyAsync(() -> {
-            List<Dashboard> allDashboards = findAllDashboards().join();
+    public CompletableFuture<List<Dashboard>> findHierarchicDashboards(User user) {
+        return findAllDashboards(user).thenApply(allDashboards -> {
             List<Dashboard> parentDashboards = allDashboards
                     .stream()
                     .filter(next -> next.getParentId() == null)
                     .collect(Collectors.toList());
             for (Dashboard dashboard : parentDashboards){
-                buildHierarchyTree(dashboard, allDashboards);
+                buildHierarchyTree(dashboard, allDashboards, user);
             }
             return parentDashboards;
-        }, ec.current());
+        });
     }
 
 }

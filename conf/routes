@@ -30,7 +30,7 @@ POST      /api/dashboard/:id/content/                       controllers.ContentC
 PUT       /api/dashboard/content/:contentId         controllers.ContentController.updateContent(request: Request, contentId: String)
 DELETE    /api/dashboard/content/:contentId         controllers.ContentController.deleteContent(request: Request, contentId: String)
 
-GET       /api/chat/:roomId/	           controllers.ChatController.chat(roomId: String, token: String)
+GET       /api/chat/:roomId	           controllers.ChatController.chat(roomId: String, token: String)
 
 
 

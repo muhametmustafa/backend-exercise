@@ -37,6 +37,7 @@ public class AuthorizationControllerTest extends WithApplication {
         userMongoCollection.insertOne(new User("Muhamet", "Muhamet", Arrays.asList(new Role("muhametId", "USER"))));
 
     }
+
     @After
     @Override
     public void stopPlay() {
@@ -48,23 +49,29 @@ public class AuthorizationControllerTest extends WithApplication {
 
     @Test
     public void testAuthenticate() {
-        ObjectNode node = Json.newObject();
-        node.put("username", "Muhamet");
-        node.put("password", "Muhamet");
+        ObjectNode node = getJsonNode("Muhamet", "Muhamet");
 
         Result result = getResult(node, POST);
         assertEquals(OK, result.status());
         assertTrue(contentAsString(result).contains("token"));
+    }
 
-        ObjectNode notFoundNode = Json.newObject();
-        notFoundNode.put("username", "Muhamet");
-        notFoundNode.put("password", "Mustafa"); // password mismatch!
-
+    @Test
+    public void testAuthenticateNotFound() {
+        ObjectNode notFoundNode = getJsonNode("Muhamet", "Mustafa");//password mismatch
         Result notFoundResult = getResult(notFoundNode, POST);
+
         assertEquals(NOT_FOUND, notFoundResult.status());
         assertTrue(contentAsString(notFoundResult).contains("error"));
+    }
 
 
+
+    private ObjectNode getJsonNode(String username, String password) {
+        ObjectNode node = Json.newObject();
+        node.put("username", username);
+        node.put("password", password);
+        return node;
     }
 
     private Result getResult(JsonNode node, String method) {

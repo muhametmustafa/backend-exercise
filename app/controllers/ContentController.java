@@ -11,6 +11,7 @@ import utils.DatabaseUtils;
 
 import java.util.concurrent.CompletableFuture;
 
+@With(AuthorizationAction.class)
 public class ContentController extends Controller {
 
     @Inject
@@ -19,13 +20,14 @@ public class ContentController extends Controller {
     @Inject
     ContentService contentService;
 
-    @With(AuthorizationAction.class)
+
     public CompletableFuture<Result> findAllContentByDashboardId(Http.Request request, String id) {
         User user = request.attrs().get(AuthorizationAction.Attrs.USER);
         return contentService.findContentByDashboardId(id, user)
+                .thenCompose(serializationService::toJsonNode)
+                .thenApply(Results::ok)
                 .exceptionally(DatabaseUtils::throwableToResult);
     }
-    @With(AuthorizationAction.class)
     @BodyParser.Of(BodyParser.Json.class)
     public CompletableFuture<Result> saveContent (Http.Request request, String dashboardId) {
         User user = request.attrs().get(AuthorizationAction.Attrs.USER);
@@ -35,18 +37,21 @@ public class ContentController extends Controller {
                 .thenApply(Results::ok)
                 .exceptionally(DatabaseUtils::throwableToResult);
     }
-    @With(AuthorizationAction.class)
+
     @BodyParser.Of(BodyParser.Json.class)
     public CompletableFuture<Result> updateContent(Http.Request request, String contentId) {
         User user = request.attrs().get(AuthorizationAction.Attrs.USER);
         return serializationService.parseBodyOfType(request, Content.class)
                 .thenCompose(content -> contentService.updateContent(contentId, content, user))
+                .thenCompose(serializationService::toJsonNode)
+                .thenApply(Results::ok)
                 .exceptionally(DatabaseUtils::throwableToResult);
     }
-    @With(AuthorizationAction.class)
     public CompletableFuture<Result> deleteContent(Http.Request request, String contentId) {
         User user = request.attrs().get(AuthorizationAction.Attrs.USER);
         return contentService.deleteContent(contentId, user)
+                .thenCompose(serializationService::toJsonNode)
+                .thenApply(Results::ok)
                 .exceptionally(DatabaseUtils::throwableToResult);
     }
 

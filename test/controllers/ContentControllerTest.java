@@ -22,7 +22,6 @@ import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static play.test.Helpers.*;
-import static play.test.Helpers.contentAsString;
 
 public class ContentControllerTest extends WithApplication {
     @Inject
@@ -39,17 +38,7 @@ public class ContentControllerTest extends WithApplication {
         super.startPlay();
         mongoDB = app.injector().instanceOf(InMemoryMongoDB.class);
         //Getting the token from a user
-        MongoCollection<User> userMongoCollection = mongoDB.getMongoDatabase().getCollection("users", User.class);
-        userMongoCollection.insertOne(new User("Muhamet", "Muhamet", singletonList(new Role("muhametId", "USER"))));
-        ObjectNode node = Json.newObject();
-        node.put("username", "Muhamet");
-        node.put("password", "Muhamet");
-        Http.RequestBuilder builder = new Http.RequestBuilder().method("POST").bodyJson(node).uri("/api/authenticate/");
-        Result userResult = route(app, builder);
-        JsonNode tokenNode = Json.parse(contentAsString(userResult));
-        Logger.of(Constants.class).debug(contentAsString(userResult));
-        Logger.of(Constants.class).debug(tokenNode.get("token").asText());
-        token = tokenNode.get("token").asText();
+        token = getToken(new User("Muhamet", "Muhamet", singletonList(new Role("muhametId", "USER"))));
 
         //Setup a dashboard and two content that will be updated and deleted while testing
         MongoCollection<Dashboard> dashboardCollection = mongoDB.getMongoDatabase().getCollection("dashboards", Dashboard.class);
@@ -87,23 +76,30 @@ public class ContentControllerTest extends WithApplication {
     }
 
     @Test
-    public void saveContentTest() {
-        Content email = new Email( "muhamet@prime.io", "PRIME Email subject",
-                "PRIME Email text", singletonList("muhametId"), emptyList() );
+    public void testSaveContent() {
+        Content email = new Email("muhamet@prime.io", "PRIME Email subject",
+                "PRIME Email text", singletonList("muhametId"), emptyList());
         //OK
-        Result okResult = getResult(POST, email, "/api/dashboard/"+ dashboard.getId().toString() +
+        Result okResult = getResult(POST, email, "/api/dashboard/" + dashboard.getId().toString() +
                 "/content/", "Bearer " + token);
         //Logger.of(Constants.class).debug(contentAsString(okResult));
         assertEquals(OK, okResult.status());
+    }
 
+    @Test
+    public void testSaveContentBadRequest() {
         //BAD REQUEST
-        Email  badEmail = new Email();
+        Email badEmail = new Email();
         badEmail.setText("This email doesn't have a subject and an email!");
-        Result badEmailResult = getResult(POST, badEmail, "/api/dashboard/"+ dashboard.getId().toString() +
+        Result badEmailResult = getResult(POST, badEmail, "/api/dashboard/" + dashboard.getId().toString() +
                 "/content/", "Bearer " + token);
         Logger.of(Constants.class).debug(contentAsString(badEmailResult));
         assertEquals(BAD_REQUEST, badEmailResult.status());
-
+    }
+    @Test
+    public void testSaveContentBadToken () {
+        Content email = new Email("muhamet@prime.io", "PRIME Email subject",
+                "PRIME Email text", singletonList("muhametId"), emptyList());
         //BAD TOKEN
         String badToken = token.substring(0,1).toUpperCase() + token.substring(1);
         Result unAuthorizedResult = getResult(POST, email, "/api/dashboard/"+ dashboard.getId().toString() +
@@ -112,69 +108,95 @@ public class ContentControllerTest extends WithApplication {
         assertTrue(contentAsString(unAuthorizedResult).contains("You are not authorized"));
     }
     @Test
-    public void updateContentTest() {
+    public void testUpdateContentForbidden() {
         Content image = new Image(dashboard.getId().toString(), "prime-logo-UPDATED",
                 singletonList("muhametId"), emptyList());
         //FORBIDDEN
-        Result forbiddenResult = getResult(PUT, image, "/api/dashboard/content/"+
+        Result forbiddenResult = getResult(PUT, image, "/api/dashboard/content/" +
                 toBeUpdated.getId().toString(), "Bearer " + token);
         //Logger.of(Constants.class).debug(contentAsString(okResult));
         assertEquals(FORBIDDEN, forbiddenResult.status());
-
+    }
+    @Test
+    public void testUpdateContentBadRequest() {
         //BAD REQUEST
-        Image  badImage = new Image();
+        Image badImage = new Image();
         badImage.setDashboardId(dashboard.getId().toString());
         //This image doesn't have an url
-        Result badImageResult = getResult(PUT, badImage, "/api/dashboard/content/"+
+        Result badImageResult = getResult(PUT, badImage, "/api/dashboard/content/" +
                 toBeUpdated.getId().toString(), "Bearer " + token);
         assertEquals(BAD_REQUEST, badImageResult.status());
-
+    }
+    @Test
+    public void testUpdateContentBadToken() {
+        Content email = new Email("muhamet@prime.io", "PRIME Email subject",
+                "PRIME Email text", singletonList("muhametId"), emptyList());
         //BAD TOKEN
         String badToken = token.substring(0,1).toUpperCase() + token.substring(1);
-        Result unAuthorizedResult = getResult(PUT, badImage, "/api/dashboard/content/"+
+        Result unAuthorizedResult = getResult(PUT, email, "/api/dashboard/content/"+
                 toBeUpdated.getId().toString(), "Bearer " + badToken);
         assertEquals(UNAUTHORIZED, unAuthorizedResult.status());
         assertTrue(contentAsString(unAuthorizedResult).contains("You are not authorized"));
     }
 
     @Test
-    public void deleteContent() {
+    public void testDeleteContentUnauthorized() {
 
         //NOT AUTHORIZED
-        String anotherToken = token.substring(0,1).toUpperCase() + token.substring(1);
+        String anotherToken = token.substring(0, 1).toUpperCase() + token.substring(1);
         Result notAuthorizedResult = getResult(DELETE, anotherToken, toBeDeleted.getId().toString());
         //Logger.of(this.getClass()).debug(contentAsString(notAuthorizedResult));
         assertEquals(UNAUTHORIZED, notAuthorizedResult.status());
-
+    }
+    @Test
+    public void  testDeleteContentNotFound() {
         //Dashboard not found!
         String contentId = "7acfad657bffd200b7bb63fe";
         Result notFoundResult = getResult(DELETE, token, contentId);
         Logger.of(Constants.class).debug(contentAsString(notFoundResult));
         assertEquals(NOT_FOUND, notFoundResult.status());
-
+    }
+    @Test
+    public void ztestDeleteContent(){
         //The user write access access
         Result okResult = getResult(DELETE, token, toBeDeleted.getId().toString());
         assertEquals(OK, okResult.status());
     }
 
     @Test
-    public void findByDashboardId() {
+    public void testFindByDashboardId() {
         //OK
         Result okResult = getResultByDashboardId(token, dashboard.getId().toString());
         assertEquals(OK, okResult.status());
-
+    }
+    @Test
+    public void testFindByDashboardIdUnauthorized() {
         //NOT AUTHORIZED
-        String anotherToken = token.substring(0,1).toUpperCase() + token.substring(1);
+        String anotherToken = token.substring(0, 1).toUpperCase() + token.substring(1);
         Result notAuthorizedResult = getResultByDashboardId(anotherToken, dashboard.getId().toString());
         assertEquals(UNAUTHORIZED, notAuthorizedResult.status());
-
+    }
+    @Test
+    public void testFindByDashboardIdNotFound() {
         //Dashboard not found!
         String dummyDashboardId = "7acfad657bffd200b7bb63fe";
         Result notFoundResult = getResultByDashboardId(token, dummyDashboardId);
         assertEquals(NOT_FOUND, notFoundResult.status());
-
     }
-
+    private String getToken(User user) {
+        MongoCollection<User> userMongoCollection = mongoDB.getMongoDatabase().getCollection("users", User.class);
+        //userMongoCollection.insertOne(new User("Muhamet", "Muhamet", singletonList(new Role("muhametId", "USER"))));
+        userMongoCollection.insertOne(user);
+        ObjectNode node = Json.newObject();
+        node.put("username", user.getUsername());
+        node.put("password", user.getPassword());
+        Http.RequestBuilder builder = new Http.RequestBuilder().method("POST").bodyJson(node).uri("/api/authenticate/");
+        Result userResult = route(app, builder);
+        JsonNode tokenNode = Json.parse(contentAsString(userResult));
+        Logger.of(Constants.class).debug(contentAsString(userResult));
+        Logger.of(Constants.class).debug(tokenNode.get("token").asText());
+        return tokenNode.get("token").asText();
+    }
 
     private Result getResult(String method, Content content, String uri, String authHeader) {
         Http.RequestBuilder builder = new Http.RequestBuilder();
@@ -202,8 +224,6 @@ public class ContentControllerTest extends WithApplication {
                 .build();
         return route(app, builder);
     }
-
-
 
     private Result getDashboardResult(String method, Dashboard dashboard, String authHeader) {
         Http.RequestBuilder builder = new Http.RequestBuilder();

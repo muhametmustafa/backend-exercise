@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Singleton
-public class BaseService<T> implements BaseRepository<T>{
+public class MongoRepository<T> implements BaseRepository<T>{
 
     @Inject
     IMongoDB mongoDB;

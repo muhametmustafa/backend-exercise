@@ -1,29 +1,19 @@
 package controllers;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.inject.Inject;
-import com.mongodb.client.MongoCollection;
-import models.Role;
 import models.User;
 import mongo.IMongoDB;
 import mongo.InMemoryMongoDB;
-import org.bson.types.ObjectId;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import play.Application;
 import play.Logger;
-import play.inject.guice.GuiceApplicationBuilder;
 import play.libs.Json;
 import play.mvc.Http;
 import play.mvc.Result;
 import play.test.WithApplication;
-import sun.rmi.runtime.Log;
-import utils.DatabaseUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
 import static play.mvc.Http.Status.OK;

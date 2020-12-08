@@ -4,22 +4,21 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
+import exceptions.RequestException;
 import models.Content;
-import models.Dashboard;
 import models.User;
 import mongo.IMongoDB;
-import play.libs.Json;
 import play.libs.concurrent.HttpExecutionContext;
-import play.mvc.Result;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
-import static play.mvc.Results.forbidden;
-import static play.mvc.Results.ok;
-import static utils.AccessUtils.*;
+import static play.mvc.Http.Status.FORBIDDEN;
+import static utils.AccessUtils.isReadable;
+import static utils.AccessUtils.isWritable;
 
 @Singleton
 public class ContentService {
@@ -28,62 +27,54 @@ public class ContentService {
     @Inject
     IMongoDB mongoDB;
     @Inject
-    private BaseService<Content> contentService;
+    private MongoRepository<Content> contentRepository;
     @Inject
-    private BaseService<Dashboard> dashboardService;
+    private DashboardService dashboardService;
 
     private final String CONTENT_COLLECTION = "content";
-    private final String DASHBOARD_COLLECTION = "dashboards";
 
     private MongoCollection<Content> getContentCollection() {
         return mongoDB.getMongoDatabase().getCollection(CONTENT_COLLECTION, Content.class);
     }
 
-    public CompletableFuture<Result> findContentByDashboardId(String dashboardId, User user) {
-        return CompletableFuture.supplyAsync(() -> {
-            MongoCollection<Content> collection = getContentCollection();
-            List<Content> contentList = collection.find()
-                    .filter(Filters.eq("dashboardId", dashboardId))
-                    .into(new ArrayList<>());
-            Dashboard dashboard = dashboardService.findById(DASHBOARD_COLLECTION, Dashboard.class, dashboardId);
-            if(isReadable(user, dashboard)){
-                List<Content> readableContent = contentList
-                        .stream()
-                        .filter(content -> isReadable(user, content))
-                        .collect(Collectors.toList());
-                return ok(Json.toJson(readableContent));
-            }
-            return forbidden(readErrorNode());
-        }, ec.current());
+    public CompletableFuture<List<Content>> findContentByDashboardId(String dashboardId, User user) {
+            return dashboardService.findDashboardById(dashboardId, user)
+                    .thenApply(dashboard -> {
+                        MongoCollection<Content> collection = getContentCollection();
+                        return collection.find()
+                                .filter(Filters.eq("dashboardId", dashboardId))
+                                .into(new ArrayList<>())
+                                .stream()
+                                .filter(content -> isReadable(user, content))
+                                .collect(Collectors.toList());
+                    });
     }
-
     public CompletableFuture<Content> saveContent(String dashboardId, Content content, User user) {
-        return CompletableFuture.supplyAsync(()-> {
-            dashboardService.findById(DASHBOARD_COLLECTION, Dashboard.class, dashboardId);
-            //Above object is created only to check if dashboard exists or it's id is valid!
-            content.setDashboardId(dashboardId);
-            return contentService.save(CONTENT_COLLECTION, Content.class, content);
+            return dashboardService.findDashboardById(dashboardId, user)
+                    .thenApply(dashboard -> {
+                        content.setDashboardId(dashboardId);
+                        return contentRepository.save(CONTENT_COLLECTION, Content.class, content);
+                    });
+    }
+
+    public CompletableFuture<Content> updateContent(String id, Content content, User user) {
+        return CompletableFuture.supplyAsync(() -> {
+            if(!isWritable(user, content)) {
+                throw new CompletionException(new RequestException(FORBIDDEN,
+                        "This user doesn't have read access on this dashboard!"));
+            }
+            return contentRepository.update(CONTENT_COLLECTION, Content.class, id, content);
         }, ec.current());
     }
 
-    public CompletableFuture<Result> updateContent (String id, Content content, User user) {
+    public CompletableFuture<Content> deleteContent (String id, User user) {
         return CompletableFuture.supplyAsync(() -> {
-            if(isWritable(user, content)) {
-                Content updatedContent = contentService.update(CONTENT_COLLECTION, Content.class, id, content);
-                return ok(Json.toJson(updatedContent));
+            Content content = contentRepository.findById(CONTENT_COLLECTION, Content.class, id);
+            if(!isWritable(user, content)) {
+                throw new CompletionException(new RequestException(FORBIDDEN,
+                        "This user doesn't have read access on this dashboard!"));
             }
-            return forbidden(writeErrorNode());
-        }, ec.current());
-    }
-
-    public CompletableFuture<Result> deleteContent (String id, User user) {
-        return CompletableFuture.supplyAsync(() -> {
-            Content content = contentService.findById(CONTENT_COLLECTION, Content.class, id);
-            if(isWritable(user, content)) {
-                Content deletedContent = contentService.deleteById(CONTENT_COLLECTION, Content.class, id);
-                return ok(Json.toJson(deletedContent));
-            }
-            return forbidden(writeErrorNode());
+            return contentRepository.deleteById(CONTENT_COLLECTION, Content.class, id);
         }, ec.current());
     }
 }

@@ -32,9 +32,8 @@ public class AuthorizationController extends Controller {
 
 
     public CompletableFuture<Result> authenticate(Http.Request request) {
-        return CompletableFuture.supplyAsync(() -> {
-            User bodyUser = Json.fromJson(request.body().asJson(), User.class);
-            User user = userService.findUserByUsername(bodyUser.getUsername()).join();
+        User bodyUser = Json.fromJson(request.body().asJson(), User.class);
+        return userService.findUserByUsername(bodyUser.getUsername()).thenApply(user -> {
             ObjectNode node = Json.newObject();
             if (user == null || !bodyUser.getPassword().equals(user.getPassword())) {
                 node.put("error", "Credentials do not match!");
